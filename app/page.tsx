@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import logo from '../public/logo-image-converter.webp';
 
 enum ImageFormat {
   WEBP = "webp",
@@ -89,13 +90,20 @@ const Home: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-8">
+    <div className="container">
+      <Image
+        src={logo}
+        alt="Image Converter Logo"
+        width={200}
+        height={50}
+        className="mb-8"
+      />
       <input
         type="file"
         multiple
         accept="image/*"
         onChange={handleImageUpload}
-        className="mb-4"
+        className="mb-4 input-file"
       />
 
       {selectedImages.length > 0 && (
@@ -114,7 +122,7 @@ const Home: React.FC = () => {
         </div>
       )}
 
-      <select className="mt-2" value={selectedFormat} onChange={handleFormatChange}>
+      <select className="mt-2 select-format" value={selectedFormat} onChange={handleFormatChange}>
         <option value="webp">WebP</option>
         <option value="avif">AVIF</option>
         <option value="jpeg">JPEG</option>

@@ -39,7 +39,7 @@ const ImageConverter: React.FC<ImageConverterProps> = ({ imageSrc, format, onCon
   }, [imageSrc, format, onConversionComplete]);
 
   return (
-    <div>
+    <div className="image-converter">
       {imageSrc && (
         <Image
           src={imageSrc}
