@@ -3,14 +3,16 @@ import sharp from 'sharp';
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageSrc, format } = await req.json();
+    const { imageSrc, format, originalName } = await req.json();
 
     const imageBuffer = Buffer.from(imageSrc.split(',')[1], 'base64');
+    const fileNameWithoutExtension = originalName.split('.').slice(0, -1).join('.');
     const convertedImageBuffer = await sharp(imageBuffer)
       .toFormat(format as keyof sharp.FormatEnum)
       .toBuffer();
 
-    const convertedFileName = `converted.${format}`;
+    // Generate unique filename using nanoid
+    const convertedFileName = `${fileNameWithoutExtension}-cwd-conv.${format}`;
     const convertedFileSize = convertedImageBuffer.byteLength;
 
     const base64Image = convertedImageBuffer.toString('base64');

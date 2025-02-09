@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import Image from 'next/image';
 import logo from '../public/logo-image-converter.webp';
+import { useDropzone } from 'react-dropzone';
 
 enum ImageFormat {
   WEBP = "webp",
@@ -24,31 +25,38 @@ const Home: React.FC = () => {
   const [conversionProgress, setConversionProgress] = useState(0);
   const [selectedImages, setSelectedImages] = useState<ImageInfo[]>([]);
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files) {
-      const imageArray: ImageInfo[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          if (event.target?.result) {
-            const data = event.target.result as string;
-            imageArray.push({
-              name: file.name,
-              size: file.size,
-              type: file.type,
-              data: data,
-            });
-            if (imageArray.length === files.length) {
-              setSelectedImages(imageArray);
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const imageArray: ImageInfo[] = acceptedFiles.map(file => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      return {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        data: '', // Temporalmente vacío, se llenará en onload
+      };
+    });
+    setSelectedImages(imageArray);
+
+    acceptedFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataURL = reader.result as string;
+        setSelectedImages(prevImages => {
+          return prevImages.map(img => {
+            if (img.name === file.name) {
+              return { ...img, data: dataURL };
             }
-          }
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-  };
+            return img;
+          });
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+
+  }, []);
+  const {getRootProps, getInputProps, isDragActive} = useDropzone({onDrop})
+
 
   const handleFormatChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedFormat(event.target.value as ImageFormat);
@@ -68,11 +76,11 @@ const Home: React.FC = () => {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ imageSrc: image.data, format: selectedFormat }),
+          body: JSON.stringify({ imageSrc: image.data, format: selectedFormat, originalName: image.name }),
         });
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error("HTTP error! status: " + response.status);
         }
 
         const result = await response.json();
@@ -98,13 +106,14 @@ const Home: React.FC = () => {
         height={50}
         className="mb-8"
       />
-      <input
-        type="file"
-        multiple
-        accept="image/*"
-        onChange={handleImageUpload}
-        className="mb-4 input-file"
-      />
+      <div {...getRootProps()} className="dropzone mb-4" style={{border: '2px dashed #ccc', borderRadius: '5px', padding: '20px', textAlign: 'center', cursor: 'pointer'}}>
+        <input {...getInputProps()} />
+        {
+          isDragActive ?
+            <p>Suelta las imágenes aquí ...</p> :
+            <p>Arrastra y suelta las imágenes aquí, o haz clic para seleccionar archivos</p>
+        }
+      </div>
 
       {selectedImages.length > 0 && (
         <div>
@@ -133,7 +142,7 @@ const Home: React.FC = () => {
         <div className="mt-4 w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
           <div
             className="bg-green-500 h-2.5 rounded-full dark:bg-green-500"
-            style={{ width: `${conversionProgress}%` }}
+            style={{ width: conversionProgress + "%" }}
           ></div>
         </div>
       )}
@@ -149,15 +158,15 @@ const Home: React.FC = () => {
                   width={200}
                   height={200}
                   alt={file.name}
-                  src={`data:image/png;base64,${file.data}`}
+                  src={"data:image/png;base64," + file.data}
                 />
               </li>
             ))}
           </ul>
           {convertedFiles.length > 0 && (
             <a
-              href={`data:image/png;base64,${convertedFiles.map(file => file.data).join(',')}`}
-              download={`converted_images.${selectedFormat}`}
+              href={"data:image/png;base64," + convertedFiles.map(file => file.data).join(',')}
+              download={"converted_images." + selectedFormat}
               className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-4 inline-block"
             >
               Descargar Imágenes Convertidas
